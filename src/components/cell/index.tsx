@@ -10,6 +10,7 @@ export type PieceType = {
   color: COLORS | null;
   type: Pieces | null;
   isFirstMove?: boolean;
+  index?: number;
 };
 
 type Props = {
