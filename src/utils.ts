@@ -47,3 +47,9 @@ export const checkIsTopEdge = (index: number) => {
 export const checkIsBottomEdge = (index: number) => {
   return Math.floor(index / 8) === 7;
 };
+
+export const findKingIndex = (color: COLORS, board: Array<PieceType>) => {
+  return board.findIndex(
+    (item) => item.color === color && item.type === "king"
+  );
+};

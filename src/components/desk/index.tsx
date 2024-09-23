@@ -8,6 +8,7 @@ import {
   checkIsLeftEdge,
   checkIsRightEdge,
   checkIsTopEdge,
+  findKingIndex,
   generateId,
   getDirectionIndexes,
   isOccupiedByPiece,
@@ -175,8 +176,9 @@ const Desk: React.FC<Props> = ({ board: initBoard }) => {
           );
           const target = index + direction;
           const firstMoveTarget = index + firstMoveDirection;
-          if (!isOccupiedByPiece(target, board) && checkIsInBounds(target))
-            setAvailableMoves((prev) => [...prev, target]);
+          if (isOccupiedByPiece(target, board) || !checkIsInBounds(target))
+            break;
+          setAvailableMoves((prev) => [...prev, target]);
           if (
             !isOccupiedByPiece(firstMoveTarget, board) &&
             piece.isFirstMove === true &&
@@ -266,19 +268,102 @@ const Desk: React.FC<Props> = ({ board: initBoard }) => {
         break;
       case "king":
         {
-          const top = getDirectionIndexes(piece.color, DIRECTIONS.STRAIGHT);
-          const back = -getDirectionIndexes(piece.color, DIRECTIONS.BOTTOM);
-          const right = -getDirectionIndexes(piece.color, DIRECTIONS.RIGHT);
-          const left = -getDirectionIndexes(piece.color, DIRECTIONS.LEFT);
+          const top = {
+            index: getDirectionIndexes(piece.color, DIRECTIONS.STRAIGHT),
+            direction: DIRECTIONS.STRAIGHT,
+          };
+          const back = {
+            index: -getDirectionIndexes(piece.color, DIRECTIONS.STRAIGHT),
+            direction: DIRECTIONS.BOTTOM,
+          };
+          const right = {
+            index: getDirectionIndexes(piece.color, DIRECTIONS.RIGHT),
+            direction: DIRECTIONS.RIGHT,
+          };
+          const left = {
+            index: getDirectionIndexes(piece.color, DIRECTIONS.LEFT),
+            direction: DIRECTIONS.LEFT,
+          };
+          const topRight = {
+            index:
+              getDirectionIndexes(piece.color, DIRECTIONS.RIGHT) +
+              getDirectionIndexes(piece.color, DIRECTIONS.STRAIGHT),
+            direction: DIRECTIONS.RIGHT,
+          };
+          const backRight = {
+            index:
+              -getDirectionIndexes(piece.color, DIRECTIONS.STRAIGHT) +
+              getDirectionIndexes(piece.color, DIRECTIONS.RIGHT),
+            direction: DIRECTIONS.RIGHT,
+          };
+          const topLeft = {
+            index:
+              getDirectionIndexes(piece.color, DIRECTIONS.LEFT) +
+              getDirectionIndexes(piece.color, DIRECTIONS.STRAIGHT),
+            direction: DIRECTIONS.LEFT,
+          };
+          const backLeft = {
+            index:
+              -getDirectionIndexes(piece.color, DIRECTIONS.STRAIGHT) +
+              getDirectionIndexes(piece.color, DIRECTIONS.LEFT),
+            direction: DIRECTIONS.LEFT,
+          };
 
-          const directions = [top, back, right, left];
+          const directions = [
+            back,
+            top,
+            right,
+            left,
+            backRight,
+            topLeft,
+            topRight,
+            backLeft,
+          ];
 
-          directions.forEach((direction) => {
-            const target = index + direction;
+          const blackDirections = directions.map((item) => ({
+            ...item,
+            index: -item.index,
+          }));
 
-            if (!isOccupiedByPiece(target, board) && checkIsInBounds(target))
+          (piece.color === "BLACK" ? blackDirections : directions).forEach(
+            ({ direction, index: targetIndex }) => {
+              const target = index + targetIndex;
+              // Получаем доступные ходы вражеского короля
+              const enemyKingMoves: Array<number> = [];
+              const enemyColor =
+                piece.color === "BLACK" ? COLORS.white : COLORS.black;
+              const enemyKingIndex = findKingIndex(enemyColor, board); // Нужна функция для нахождения индекса короля
+              const enemyKingDirections =
+                enemyColor === "BLACK" ? blackDirections : directions;
+
+              // Собираем все возможные ходы вражеского короля
+              enemyKingDirections.forEach(({ index: enemyTargetIndex }) => {
+                const enemyTarget = enemyKingIndex + enemyTargetIndex;
+                if (
+                  checkIsInBounds(enemyTarget) &&
+                  !isOccupiedByPiece(enemyTarget, board)
+                ) {
+                  enemyKingMoves.push(enemyTarget);
+                }
+              });
+
+              // Если цель находится в пределах радиуса вражеского короля — пропускаем ход
+              if (enemyKingMoves.includes(target)) {
+                return; // Пропускаем эту клетку
+              }
+              if (!checkIsInBounds(target) || isOccupiedByPiece(target, board))
+                return;
+
+              if (
+                (direction === DIRECTIONS.RIGHT && checkIsRightEdge(index)) ||
+                (direction === DIRECTIONS.LEFT && checkIsLeftEdge(index)) ||
+                (direction === DIRECTIONS.BOTTOM && checkIsBottomEdge(index)) ||
+                (direction === DIRECTIONS.STRAIGHT && checkIsTopEdge(index))
+              )
+                return;
               setAvailableMoves((prev) => [...prev, target]);
-          });
+            }
+          );
         }
         break;
       default:
