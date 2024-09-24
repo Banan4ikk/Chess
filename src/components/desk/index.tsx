@@ -2,7 +2,13 @@ import React, { useState } from "react";
 import { DeskContainer } from "./styles";
 import Cell, { PieceType } from "../cell";
 import { COLORS } from "../../constants";
-import { generateId, isOccupiedByPiece } from "../../utils";
+import {
+  findKingIndex,
+  generateId,
+  getEnemyColor,
+  isKingInCheck,
+  isOccupiedByPiece,
+} from "../../utils";
 import {
   getBishopMoves,
   getKingMoves,
@@ -24,6 +30,8 @@ const Desk: React.FC<Props> = ({ board: initBoard }) => {
     index: number;
   } | null>(null);
   const [availableMoves, setAvailableMoves] = useState<Array<number>>([]);
+  const [checkValidMoves, setCheckValidMoves] = useState<Array<number>>([]);
+  const [isInCheck, setIsInCheck] = useState<boolean>(false);
 
   const getColor = (index: number) => {
     const row = Math.floor(index / 8);
@@ -33,6 +41,7 @@ const Desk: React.FC<Props> = ({ board: initBoard }) => {
 
   const makeMove = (index: number) => {
     if (!selectedPiece) return;
+
     const updatedBoard = [...board];
     updatedBoard[index] =
       selectedPiece.piece.type === "pawn"
@@ -42,16 +51,30 @@ const Desk: React.FC<Props> = ({ board: initBoard }) => {
             isFirstMove: selectedPiece.piece.isFirstMove === true && false,
           }
         : { ...selectedPiece.piece, index };
+
     updatedBoard[selectedPiece.index] = {
       id: generateId(),
       color: null,
       type: null,
     };
+
     setBoard(updatedBoard);
     setCurrentMove((prevState) =>
       prevState === COLORS.white ? COLORS.black : COLORS.white
     );
     setAvailableMoves([]);
+    setSelectedPiece(null);
+
+    // Проверяем, не поставлен ли шах королю после хода
+    const isCheck = isKingInCheck(currentMove, updatedBoard);
+
+    if (isCheck) {
+      // Возвращаем доску к исходному состоянию
+      setIsInCheck(true);
+    } else {
+      // Если шаха нет, обновляем доску и ход переходит другой стороне
+      setIsInCheck(false);
+    }
   };
 
   const getAvailableMoves = (piece: PieceType, index: number) => {

@@ -65,10 +65,18 @@ export const checkIsBottomEdge = (index: number) => {
   return Math.floor(index / 8) === 7;
 };
 
-export const findKingIndex = (color: COLORS, board: Array<PieceType>) => {
+export const findKingIndex = (
+  color: COLORS | null,
+  board: Array<PieceType>
+) => {
+  if (!color) return -1;
   return board.findIndex(
     (item) => item.color === color && item.type === "king"
   );
+};
+
+export const getEnemyColor = (color: COLORS | null) => {
+  return color === "BLACK" ? COLORS.white : COLORS.black;
 };
 
 export const getAvailableMovesForPiece = (
@@ -116,22 +124,14 @@ export const isSquareUnderAttack = (
   return false;
 };
 
-// Проверка, находится ли король под шахом
 export const isKingInCheck = (
   color: COLORS | null,
   board: Array<PieceType>
 ) => {
   if (!color) return false;
-  const kingIndex = board.findIndex(
-    (piece) => piece.type === "king" && piece.color === color
-  );
+  const kingIndex = findKingIndex(getEnemyColor(color), board);
+
   if (kingIndex === -1) return false; // Если король не найден
 
-  return board.some((piece, index) => {
-    if (piece.color !== color) {
-      const availableMoves = getAvailableMovesForPiece(piece, index, board);
-      return availableMoves.includes(kingIndex);
-    }
-    return false;
-  });
+  return isSquareUnderAttack(kingIndex, color, board);
 };
