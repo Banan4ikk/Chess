@@ -39,6 +39,16 @@ export const checkIsInBounds = (target: number) => {
 export const isOccupiedByPiece = (index: number, board: Array<PieceType>) => {
   return board[index] && board[index].type !== null;
 };
+export const isEnemyPiece = (
+  index: number,
+  board: Array<PieceType>,
+  color: COLORS | null
+) => {
+  if (!color) return false;
+  return (
+    board[index] && board[index].color !== color && board[index].color !== null
+  );
+};
 export const checkIsLeftEdge = (index: number) => {
   return index % 8 === 0;
 };
@@ -104,4 +114,24 @@ export const isSquareUnderAttack = (
     }
   }
   return false;
+};
+
+// Проверка, находится ли король под шахом
+export const isKingInCheck = (
+  color: COLORS | null,
+  board: Array<PieceType>
+) => {
+  if (!color) return false;
+  const kingIndex = board.findIndex(
+    (piece) => piece.type === "king" && piece.color === color
+  );
+  if (kingIndex === -1) return false; // Если король не найден
+
+  return board.some((piece, index) => {
+    if (piece.color !== color) {
+      const availableMoves = getAvailableMovesForPiece(piece, index, board);
+      return availableMoves.includes(kingIndex);
+    }
+    return false;
+  });
 };

@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { DeskContainer } from "./styles";
 import Cell, { PieceType } from "../cell";
 import { COLORS } from "../../constants";
-import { generateId } from "../../utils";
+import { generateId, isOccupiedByPiece } from "../../utils";
 import {
   getBishopMoves,
   getKingMoves,
@@ -101,8 +101,9 @@ const Desk: React.FC<Props> = ({ board: initBoard }) => {
             color={getColor(index)}
             piece={piece}
             selectedPiece={selectedPiece?.piece || null}
-            availableMoves={availableMoves}
-            index={index}
+            showMove={
+              availableMoves.includes(index) && !isOccupiedByPiece(index, board)
+            }
           />
         </div>
       ))}

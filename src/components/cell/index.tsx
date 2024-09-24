@@ -17,21 +17,14 @@ type Props = {
   color: COLORS;
   piece: PieceType | null;
   selectedPiece: PieceType | null;
-  availableMoves: Array<number>;
-  index: number;
+  showMove?: boolean;
 };
 
-const Cell: React.FC<Props> = ({
-  color,
-  piece,
-  selectedPiece,
-  index,
-  availableMoves,
-}) => {
+const Cell: React.FC<Props> = ({ color, piece, selectedPiece, showMove }) => {
   return (
     <CellContainer color={color} selected={selectedPiece?.id === piece?.id}>
       {piece && <Piece {...piece} />}
-      {availableMoves.includes(index) && <ReactSVG src="public/dot.svg" />}
+      {showMove && <ReactSVG src="public/dot.svg" />}
     </CellContainer>
   );
 };
