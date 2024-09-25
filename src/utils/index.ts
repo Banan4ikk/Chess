@@ -1,4 +1,4 @@
-import { COLORS, DIRECTIONS } from "../constants";
+import { COLORS, DIRECTIONS, DIRECTIONS_TYPE } from "../constants";
 import { PieceType } from "../components/cell";
 import {
   getBishopMoves,
@@ -66,6 +66,41 @@ export const checkIsBottomEdge = (index: number) => {
   return Math.floor(index / 8) === 7;
 };
 
+export const getDirectionType = (
+  index1: number,
+  index2: number
+): DIRECTIONS_TYPE | null => {
+  const x1 = index1 % 8;
+  const y1 = Math.floor(index1 / 8);
+  const x2 = index2 % 8;
+  const y2 = Math.floor(index2 / 8);
+
+  // Проверка горизонтального направления
+  if (y1 === y2) {
+    return DIRECTIONS_TYPE.horizontal;
+  }
+
+  // Проверка вертикального направления
+  if (x1 === x2) {
+    return DIRECTIONS_TYPE.vertical;
+  }
+
+  // Проверка диагональных направлений
+  const deltaX = x2 - x1;
+  const deltaY = y2 - y1;
+
+  // Если абсолютные значения разностей равны, это диагональ
+  if (Math.abs(deltaX) === Math.abs(deltaY)) {
+    if (deltaX > 0) {
+      return DIRECTIONS_TYPE.rightDiagonal; // диагональ вправо
+    }
+    return DIRECTIONS_TYPE.leftDiagonal; // диагональ влево
+  }
+
+  // Если не попадает ни под одну категорию
+  return null;
+};
+
 export const findKingIndex = (
   color: COLORS | null,
   board: Array<PieceType>
@@ -101,7 +136,7 @@ export const getAvailableMovesForPiece = (
       moves = getKnightMoves(piece, index, board);
       break;
     case "pawn":
-      moves = getPawnMoves(piece, index, board);
+      moves = getPawnMoves(piece, index, board, true);
       break;
     default:
       moves = [];
@@ -224,7 +259,6 @@ export const calculateAttackLine = (
 
   return attackLine;
 };
-
 export const movesInCheck = (
   piece: PieceType,
   attacker: PieceType,
@@ -238,12 +272,43 @@ export const movesInCheck = (
 
   // Фильтруем ходы, которые могут заблокировать или взять атакующую фигуру
   const validMoves = availableMoves.filter((move) => {
-    // Проверяем, может ли фигура заблокировать шах (перекрыть линию атаки) или взять атакующую фигуру
     return attackLine.includes(move) || move === attacker.index;
   });
 
+  // Получаем возможные ходы короля
   const kingMoves = getKingMoves(board[kingPos], kingPos, board);
 
-  // Для короля возвращаем только его ходы, для остальных фигур — только ходы, которые могут заблокировать шах
-  return piece.type === "king" ? kingMoves : validMoves;
+  // Определяем направление атаки
+  const attackDirection =
+    attackLine.length > 1
+      ? getDirectionType(attackLine[0], attackLine[1])
+      : null;
+
+  // Если это король, фильтруем его ходы
+  if (piece.type === "king") {
+    const filteredKingMoves = kingMoves.filter(
+      (move) => !attackLine.includes(move)
+    ); // Исключаем ходы, находящиеся в линии атаки
+
+    // Дополнительно исключаем ходы назад по линии атаки
+    return filteredKingMoves.filter((move) => {
+      if (!attackDirection) return true; // Если направление атаки не определено, допускаем ход
+
+      const isHorizontal = attackDirection === DIRECTIONS_TYPE.horizontal;
+      const isVertical = attackDirection === DIRECTIONS_TYPE.vertical;
+      const isLeftDiagonal = attackDirection === DIRECTIONS_TYPE.leftDiagonal;
+      const isRightDiagonal = attackDirection === DIRECTIONS_TYPE.rightDiagonal;
+
+      // Проверяем направление атаки
+      return (
+        (isHorizontal && move !== kingPos + 1 && move !== kingPos - 1) ||
+        (isVertical && move !== kingPos + 8 && move !== kingPos - 8) ||
+        (isLeftDiagonal && move !== kingPos - 7 && move !== kingPos + 7) ||
+        (isRightDiagonal && move !== kingPos - 9 && move !== kingPos + 9)
+      ); // Ход допустим
+    }); // Возвращаем только допустимые ходы короля
+  }
+
+  // Для остальных фигур возвращаем только допустимые ходы
+  return validMoves;
 };

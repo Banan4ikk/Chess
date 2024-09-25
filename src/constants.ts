@@ -9,3 +9,10 @@ export enum DIRECTIONS {
   RIGHT = "right",
   LEFT = "left",
 }
+
+export enum DIRECTIONS_TYPE {
+  horizontal = "HORIZONTAL",
+  vertical = "VERTICAL",
+  rightDiagonal = "RIGHT_DIAGONAL",
+  leftDiagonal = "LEFT_DIAGONAL"
+}

@@ -175,7 +175,12 @@ export const getRookMoves = (piece: PieceType, index: number, board: Board) => {
   return moves;
 };
 
-export const getPawnMoves = (piece: PieceType, index: number, board: Board) => {
+export const getPawnMoves = (
+  piece: PieceType,
+  index: number,
+  board: Board,
+  includeAttack?: boolean
+) => {
   const moves: Array<number> = [];
   const firstMoveDirection =
     getDirectionIndexes(piece.color, DIRECTIONS.STRAIGHT) * 2;
@@ -215,6 +220,10 @@ export const getPawnMoves = (piece: PieceType, index: number, board: Board) => {
     checkIsInBounds(firstMoveTarget)
   ) {
     moves.push(firstMoveTarget);
+  }
+
+  if (includeAttack) {
+    moves.push(attackLeft, attackRight);
   }
   return moves;
 };
@@ -379,6 +388,7 @@ export const getKingMoves = (piece: PieceType, index: number, board: Board) => {
   // Проверяем ходы текущего короля
   directions.forEach(({ direction, index: targetIndex }) => {
     const target = index + targetIndex;
+    if (!checkIsInBounds(target)) return;
 
     // Проверка на радиус вражеского короля
     if (enemyKingMoves.includes(target)) return; // Пропускаем, если клетка рядом с вражеским королем
@@ -386,8 +396,12 @@ export const getKingMoves = (piece: PieceType, index: number, board: Board) => {
     // Проверяем, под атакой ли клетка
     if (isSquareUnderAttack(target, enemyColor, board)) return;
 
-    // Проверяем границы доски
-    if (!checkIsInBounds(target) || isOccupiedByPiece(target, board)) return;
+    if (
+      isOccupiedByPiece(target, board) &&
+      isEnemyPiece(target, board, piece.color)
+    ) {
+      moves.push(target);
+    }
 
     // Проверка краёв доски
     if (
