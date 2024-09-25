@@ -2,7 +2,6 @@ import { COLORS, DIRECTIONS } from "../constants";
 import { PieceType } from "../components/cell";
 import {
   getBishopMoves,
-  getDirectionsByPiece,
   getKingMoves,
   getKnightMoves,
   getPawnMoves,
@@ -153,90 +152,40 @@ export const getKingCheckPiece = (
 
   return getAttackingPiece(kingIndex, color, board);
 };
-//
-// export const calculateAttackLine = (
-//   attacker: PieceType,
-//   board: Array<PieceType>
-// ): Array<number> => {
-//   const attackLine: Array<number> = [];
-//   const attackerPos = attacker.index;
-//   const kingPos = findKingIndex(getEnemyColor(attacker.color), board);
-//
-//   if (!attackerPos) return [];
-//
-//   // Проверяем корректность позиций
-//   if (!checkIsInBounds(attackerPos) || kingPos === -1) return [];
-//
-//   // Проверяем, является ли атакующая фигура конем
-//   if (attacker.type === "knight") {
-//     const knightMoves = getKnightMoves(attacker, attackerPos, board);
-//
-//     if (knightMoves.some((move) => checkIsInBounds(move) && move === kingPos)) {
-//       return [kingPos]; // Если король под угрозой от коня
-//     }
-//     return []; // Нет линии атаки для коня
-//   }
-//
-//   // Проверяем, является ли атакующая фигура пешкой
-//   if (attacker.type === "pawn") {
-//     const pawnMoves = getPawnMoves(attacker, attackerPos, board);
-//
-//     if (pawnMoves.some((move) => checkIsInBounds(move) && move === kingPos)) {
-//       return [kingPos]; // Если король под угрозой от пешки
-//     }
-//   }
-//
-//   // Получаем направления для других фигур
-//   const directions = getDirectionsByPiece(attacker);
-//
-//   // Используем forEach для обработки каждого направления
-//   directions.forEach(({ index }) => {
-//     let currentPos = attackerPos;
-//
-//     while (checkIsInBounds(currentPos)) {
-//       currentPos += index;
-//
-//       if (isOccupiedByPiece(currentPos, board)) {
-//         if (isEnemyPiece(currentPos, board, attacker.color)) {
-//           // Если встречаем фигуру противника, добавляем в линию атаки
-//           attackLine.push(currentPos);
-//         }
-//         break; // Выходим, если встретили любую фигуру
-//       }
-//
-//       attackLine.push(currentPos); // Добавляем свободную клетку
-//       if (currentPos === kingPos) break; // Если дошли до короля, выходим
-//     }
-//   });
-//
-//   // Добавляем короля в линию атаки, если он находится в пределах доски
-//   if (checkIsInBounds(kingPos)) {
-//     attackLine.push(kingPos);
-//   }
-//
-//   return attackLine;
-// };
-//
-// export const canPieceBlockCheck = (
-//   piece: PieceType,
-//   attacker: PieceType,
-//   board: Array<PieceType>
-// ) => {
-//   if (!piece.index || !attacker.index) return false;
-//
-//   // const attackLine = calculateAttackLine(attacker, board);
-//   const attackLine = getAvailableMovesForPiece(attacker, attacker.index, board);
-//   // console.log("attack", attackLine);
-//   const availableMoves = getAvailableMovesForPiece(piece, piece.index, board);
-//   const intersection = attackLine.filter((value) =>
-//     availableMoves.includes(value)
-//   );
-//   console.log("attack", attackLine);
-//   console.log("intecsetion", intersection);
-//
-//   // Для других фигур проверяем, может ли она занять любую клетку на линии атаки
-//   return availableMoves.some((move) => attackLine.includes(move));
-// };
+
+const getDirectionToKing = (
+  attackerPos: number,
+  kingPos: number,
+  pieceType: string
+): number | null => {
+  const boardSize = 8;
+
+  // Вычисляем разницу по строкам и колонкам
+  const rowDiff =
+    Math.floor(kingPos / boardSize) - Math.floor(attackerPos / boardSize);
+  const colDiff = (kingPos % boardSize) - (attackerPos % boardSize);
+
+  // Для ладьи (горизонтальное или вертикальное направление)
+  if (pieceType === "rook" || pieceType === "queen") {
+    if (rowDiff === 0) return colDiff > 0 ? 1 : -1; // По горизонтали
+    if (colDiff === 0) return rowDiff > 0 ? boardSize : -boardSize; // По вертикали
+  }
+
+  // Для слона (диагональное направление)
+  if (pieceType === "bishop" || pieceType === "queen") {
+    if (Math.abs(rowDiff) === Math.abs(colDiff)) {
+      return rowDiff > 0
+        ? colDiff > 0
+          ? boardSize + 1
+          : boardSize - 1
+        : colDiff > 0
+        ? -(boardSize - 1)
+        : -(boardSize + 1);
+    }
+  }
+
+  return null; // Если направление не найдено
+};
 
 export const calculateAttackLine = (
   attacker: PieceType,
@@ -246,67 +195,34 @@ export const calculateAttackLine = (
   const attackerPos = attacker.index;
   const kingPos = findKingIndex(getEnemyColor(attacker.color), board);
 
-  if (!attackerPos || kingPos === -1) return [];
+  if (kingPos === -1 || !attackerPos) return [];
 
-  // Проверяем, является ли атакующая фигура конем
-  if (attacker.type === "knight") {
-    const knightMoves = getKnightMoves(attacker, attackerPos, board);
+  // Проверяем тип фигуры
+  if (
+    attacker.type === "queen" ||
+    attacker.type === "rook" ||
+    attacker.type === "bishop"
+  ) {
+    const direction = getDirectionToKing(attackerPos, kingPos, attacker.type);
 
-    if (knightMoves.includes(kingPos)) {
-      return [kingPos]; // Если король под угрозой от коня
+    if (!direction) return [];
+
+    let currentPos = attackerPos + direction;
+    while (currentPos !== kingPos) {
+      attackLine.push(currentPos);
+      currentPos += direction;
     }
-    return []; // Нет линии атаки для коня
-  }
 
-  // Проверяем, является ли атакующая фигура пешкой
-  if (attacker.type === "pawn") {
-    const pawnMoves = getPawnMoves(attacker, attackerPos, board);
-
-    if (pawnMoves.includes(kingPos)) {
-      return [kingPos]; // Если король под угрозой от пешки
+    attackLine.push(kingPos); // Добавляем короля в линию атаки
+  } else if (attacker.type === "pawn" || attacker.type === "knight") {
+    if (
+      getAvailableMovesForPiece(attacker, attackerPos, board).includes(kingPos)
+    ) {
+      attackLine.push(attackerPos, kingPos); // Если угрожает королю, добавить только атакующую клетку и короля
     }
-  }
-
-  // Получаем направления для других фигур
-  const directions = getDirectionsByPiece(attacker);
-
-  // Используем forEach для обработки каждого направления
-  directions.forEach(({ index }) => {
-    let currentPos = attackerPos;
-
-    while (checkIsInBounds(currentPos)) {
-      currentPos += index;
-
-      if (isOccupiedByPiece(currentPos, board)) {
-        if (isEnemyPiece(currentPos, board, attacker.color)) {
-          // Если встречаем фигуру противника, добавляем в линию атаки
-          attackLine.push(currentPos);
-        }
-        break; // Выходим, если встретили любую фигуру
-      }
-
-      attackLine.push(currentPos); // Добавляем свободную клетку
-      if (currentPos === kingPos) break; // Если дошли до короля, выходим
-    }
-  });
-
-  // Добавляем короля в линию атаки, если он находится в пределах доски
-  if (checkIsInBounds(kingPos)) {
-    attackLine.push(kingPos);
   }
 
   return attackLine;
-};
-
-const canBlockMove = (
-  move: number,
-  attacker: PieceType,
-  board: Array<PieceType>
-): boolean => {
-  if (!attacker.color) return false;
-
-  const attackingPiece = getAttackingPiece(move, attacker.color, board);
-  return !!(attackingPiece && attackingPiece.type === attacker.type);
 };
 
 export const movesInCheck = (
@@ -317,18 +233,17 @@ export const movesInCheck = (
   if (!piece.index || !attacker.index) return [];
 
   const kingPos = findKingIndex(piece.color, board);
-
-  // Получаем линии атаки
   const attackLine = calculateAttackLine(attacker, board);
   const availableMoves = getAvailableMovesForPiece(piece, piece.index, board);
 
-  // Фильтруем блокирующие ходы
-  const blockingMoves = availableMoves.filter((move) => {
-    return attackLine.includes(move) && canBlockMove(move, attacker, board);
+  // Фильтруем ходы, которые могут заблокировать или взять атакующую фигуру
+  const validMoves = availableMoves.filter((move) => {
+    // Проверяем, может ли фигура заблокировать шах (перекрыть линию атаки) или взять атакующую фигуру
+    return attackLine.includes(move) || move === attacker.index;
   });
 
   const kingMoves = getKingMoves(board[kingPos], kingPos, board);
 
-  // Возвращаем как блокирующие ходы, так и доступные ходы для короля
-  return piece.type === "king" ? kingMoves : blockingMoves;
+  // Для короля возвращаем только его ходы, для остальных фигур — только ходы, которые могут заблокировать шах
+  return piece.type === "king" ? kingMoves : validMoves;
 };
