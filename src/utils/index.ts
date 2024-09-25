@@ -298,26 +298,37 @@ export const calculateAttackLine = (
   return attackLine;
 };
 
+const canBlockMove = (
+  move: number,
+  attacker: PieceType,
+  board: Array<PieceType>
+): boolean => {
+  if (!attacker.color) return false;
+
+  const attackingPiece = getAttackingPiece(move, attacker.color, board);
+  return !!(attackingPiece && attackingPiece.type === attacker.type);
+};
+
 export const movesInCheck = (
   piece: PieceType,
   attacker: PieceType,
   board: Array<PieceType>
-) => {
-  if (!piece.index || !attacker.index) return [] as Array<number>;
+): Array<number> => {
+  if (!piece.index || !attacker.index) return [];
+
   const kingPos = findKingIndex(piece.color, board);
 
   // Получаем линии атаки
   const attackLine = calculateAttackLine(attacker, board);
   const availableMoves = getAvailableMovesForPiece(piece, piece.index, board);
 
-  // Фильтруем только те клетки, которые могут перекрыть шах
-  const blockingMoves = attackLine.filter((linePosition) => {
-    const isAdjacentToKing =
-      linePosition === findKingIndex(getEnemyColor(piece.color), board);
-    return availableMoves.includes(linePosition) && !isAdjacentToKing;
+  // Фильтруем блокирующие ходы
+  const blockingMoves = availableMoves.filter((move) => {
+    return attackLine.includes(move) && canBlockMove(move, attacker, board);
   });
 
   const kingMoves = getKingMoves(board[kingPos], kingPos, board);
 
+  // Возвращаем как блокирующие ходы, так и доступные ходы для короля
   return piece.type === "king" ? kingMoves : blockingMoves;
 };
