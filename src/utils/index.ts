@@ -312,3 +312,23 @@ export const movesInCheck = (
   // Для остальных фигур возвращаем только допустимые ходы
   return validMoves;
 };
+
+export const isCheckmate = (
+  color: COLORS,
+  board: Array<PieceType>
+): boolean => {
+  const kingIndex = findKingIndex(color, board);
+
+  // Проверяем, есть ли король
+  if (kingIndex === -1) return false;
+
+  // Получаем фигуру, угрожающую королю
+  const attackingPiece = getKingCheckPiece(color, board);
+  if (!attackingPiece) return false;
+
+  // Получаем доступные ходы короля
+  const kingMoves = movesInCheck(board[kingIndex], attackingPiece, board);
+
+  // Проверяем, есть ли доступные ходы
+  return kingMoves.length === 0; // Если нет доступных ходов, это мат
+};

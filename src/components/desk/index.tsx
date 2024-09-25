@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { createLogger } from "vite";
 import { DeskContainer } from "./styles";
 import Cell, { PieceType } from "../cell";
 import { COLORS } from "../../constants";
@@ -7,7 +8,8 @@ import {
   generateId,
   getKingCheckPiece,
   isOccupiedByPiece,
-} from "../../utils";
+  isCheckmate,
+} from "../../utils"; // Импортируем isCheckmate
 import {
   getBishopMoves,
   getKingMoves,
@@ -31,6 +33,7 @@ const Desk: React.FC<Props> = ({ board: initBoard }) => {
   const [availableMoves, setAvailableMoves] = useState<Array<number>>([]);
   const [checkPiece, setCheckPiece] = useState<PieceType | null>(null);
   const [isInCheck, setIsInCheck] = useState<boolean>(false);
+  const [isInCheckMate, setIsInCheckMate] = useState<boolean>(false); // Добавляем состояние мата
 
   useEffect(() => {
     const updBoard = initBoard.map((item, index) => ({
@@ -39,6 +42,15 @@ const Desk: React.FC<Props> = ({ board: initBoard }) => {
     }));
     setBoard(updBoard);
   }, []);
+
+  useEffect(() => {
+    // Проверяем мат после каждого хода
+    if (isInCheck) {
+      const checkmate = isCheckmate(currentMove, board);
+      setIsInCheckMate(checkmate); // Обновляем состояние мата
+      console.log("checkmate");
+    }
+  }, [isInCheck, board, currentMove]);
 
   const getColor = (index: number) => {
     const row = Math.floor(index / 8);
@@ -125,7 +137,6 @@ const Desk: React.FC<Props> = ({ board: initBoard }) => {
     if (isInCheck && checkPiece && piece) {
       const moves = movesInCheck(piece, checkPiece, board);
       setAvailableMoves(moves);
-      // if (!isBlockingMove) return; // Не разрешаем ход, если фигура не может перекрыть шах
     }
 
     if (selectedPiece && availableMoves.includes(index)) {
