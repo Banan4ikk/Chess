@@ -1,12 +1,11 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { DeskContainer } from "./styles";
 import Cell, { PieceType } from "../cell";
 import { COLORS } from "../../constants";
 import {
-  findKingIndex,
+  movesInCheck,
   generateId,
-  getEnemyColor,
-  isKingInCheck,
+  getKingCheckPiece,
   isOccupiedByPiece,
 } from "../../utils";
 import {
@@ -24,14 +23,22 @@ type Props = {
 
 const Desk: React.FC<Props> = ({ board: initBoard }) => {
   const [currentMove, setCurrentMove] = useState<COLORS>(COLORS.white);
-  const [board, setBoard] = useState<Array<PieceType>>(initBoard);
+  const [board, setBoard] = useState<Array<PieceType>>([]);
   const [selectedPiece, setSelectedPiece] = useState<{
     piece: PieceType;
     index: number;
   } | null>(null);
   const [availableMoves, setAvailableMoves] = useState<Array<number>>([]);
-  const [checkValidMoves, setCheckValidMoves] = useState<Array<number>>([]);
+  const [checkPiece, setCheckPiece] = useState<PieceType | null>(null);
   const [isInCheck, setIsInCheck] = useState<boolean>(false);
+
+  useEffect(() => {
+    const updBoard = initBoard.map((item, index) => ({
+      ...item,
+      ...(item.type !== null && { index }),
+    }));
+    setBoard(updBoard);
+  }, []);
 
   const getColor = (index: number) => {
     const row = Math.floor(index / 8);
@@ -66,14 +73,16 @@ const Desk: React.FC<Props> = ({ board: initBoard }) => {
     setSelectedPiece(null);
 
     // Проверяем, не поставлен ли шах королю после хода
-    const isCheck = isKingInCheck(currentMove, updatedBoard);
+    const kingCheckPiece = getKingCheckPiece(currentMove, updatedBoard);
 
-    if (isCheck) {
+    if (kingCheckPiece) {
       // Возвращаем доску к исходному состоянию
+      setCheckPiece(kingCheckPiece);
       setIsInCheck(true);
     } else {
       // Если шаха нет, обновляем доску и ход переходит другой стороне
       setIsInCheck(false);
+      setCheckPiece(null);
     }
   };
 
@@ -103,16 +112,25 @@ const Desk: React.FC<Props> = ({ board: initBoard }) => {
   };
 
   const onClick = (index: number, piece: PieceType) => {
-    if (selectedPiece && availableMoves.includes(index)) {
-      makeMove(index);
-      setSelectedPiece(null);
-    } else if (
+    // Проверяем, принадлежит ли фигура текущему ходу
+    if (
       (currentMove === COLORS.black && piece.color === COLORS.black) ||
       (currentMove === COLORS.white && piece.color === COLORS.white)
     ) {
       setAvailableMoves([]);
       setSelectedPiece({ piece, index });
       getAvailableMoves(piece, index);
+    }
+    // Если шах, проверяем, может ли фигура перекрыть шах
+    if (isInCheck && checkPiece && piece) {
+      const moves = movesInCheck(piece, checkPiece, board);
+      setAvailableMoves(moves);
+      // if (!isBlockingMove) return; // Не разрешаем ход, если фигура не может перекрыть шах
+    }
+
+    if (selectedPiece && availableMoves.includes(index)) {
+      makeMove(index);
+      // Добавлен возврат, чтобы избежать сброса выбранной фигуры
     }
   };
 

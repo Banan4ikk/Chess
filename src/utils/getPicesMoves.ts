@@ -16,151 +16,162 @@ import {
 
 type Board = Array<PieceType>;
 
+type Direction = { index: number; direction: DIRECTIONS };
+
+export const getDirectionsByPiece = (piece: PieceType) => {
+  const directions: Array<Direction> = [];
+
+  const bishopMoves = [
+    {
+      index:
+        getDirectionIndexes(piece.color, DIRECTIONS.RIGHT) +
+        getDirectionIndexes(piece.color, DIRECTIONS.STRAIGHT),
+      direction: DIRECTIONS.RIGHT,
+    },
+    {
+      index:
+        getDirectionIndexes(piece.color, DIRECTIONS.LEFT) +
+        getDirectionIndexes(piece.color, DIRECTIONS.STRAIGHT),
+      direction: DIRECTIONS.LEFT,
+    },
+    {
+      index:
+        getDirectionIndexes(piece.color, DIRECTIONS.LEFT) +
+        getDirectionIndexes(piece.color, DIRECTIONS.STRAIGHT) * -1,
+      direction: DIRECTIONS.LEFT,
+    },
+    {
+      index:
+        getDirectionIndexes(piece.color, DIRECTIONS.RIGHT) +
+        getDirectionIndexes(piece.color, DIRECTIONS.STRAIGHT) * -1,
+      direction: DIRECTIONS.RIGHT,
+    },
+  ];
+
+  const rookMoves = [
+    {
+      index: getDirectionIndexes(piece.color, DIRECTIONS.STRAIGHT),
+      direction: DIRECTIONS.STRAIGHT,
+    },
+    {
+      index: -getDirectionIndexes(piece.color, DIRECTIONS.STRAIGHT),
+      direction: DIRECTIONS.BOTTOM,
+    },
+    {
+      index: getDirectionIndexes(piece.color, DIRECTIONS.RIGHT),
+      direction: DIRECTIONS.RIGHT,
+    },
+    {
+      index: getDirectionIndexes(piece.color, DIRECTIONS.LEFT),
+      direction: DIRECTIONS.LEFT,
+    },
+  ];
+
+  // Добавляем движения слона
+  if (piece.type === "bishop" || piece.type === "queen") {
+    directions.push(...bishopMoves);
+  }
+
+  // Добавляем движения ладьи
+  if (piece.type === "rook" || piece.type === "queen") {
+    directions.push(...rookMoves);
+  }
+
+  return piece.color === COLORS.black
+    ? directions.map((dir) => ({ ...dir, index: -dir.index }))
+    : directions;
+};
 export const getBishopMoves = (
   piece: PieceType,
   index: number,
   board: Board
 ) => {
-  const topRight = {
-    index:
-      getDirectionIndexes(piece.color, DIRECTIONS.RIGHT) +
-      getDirectionIndexes(piece.color, DIRECTIONS.STRAIGHT),
-    direction: DIRECTIONS.RIGHT,
-  };
-  const topLeft = {
-    index:
-      getDirectionIndexes(piece.color, DIRECTIONS.LEFT) +
-      getDirectionIndexes(piece.color, DIRECTIONS.STRAIGHT),
-    direction: DIRECTIONS.LEFT,
-  };
-  const bottomLeft = {
-    index:
-      getDirectionIndexes(piece.color, DIRECTIONS.LEFT) +
-      getDirectionIndexes(piece.color, DIRECTIONS.STRAIGHT) * -1,
-    direction: DIRECTIONS.LEFT,
-  };
-  const bottomRight = {
-    index:
-      getDirectionIndexes(piece.color, DIRECTIONS.RIGHT) +
-      getDirectionIndexes(piece.color, DIRECTIONS.STRAIGHT) * -1,
-    direction: DIRECTIONS.RIGHT,
-  };
-
-  const directions = [topLeft, bottomLeft, topRight, bottomRight];
-  const blackMoves = directions.map((item) => ({
-    ...item,
-    index: -item.index,
-  }));
   const moves: Array<number> = [];
 
-  (piece.color === COLORS.white ? directions : blackMoves).forEach(
-    ({ direction, index: targetIndex }) => {
-      let target = index + targetIndex;
-      while (checkIsInBounds(target)) {
-        if (
-          isOccupiedByPiece(target, board) &&
-          !isEnemyPiece(target, board, piece.color)
-        ) {
-          // Если на клетке своя фигура, нужно остановить движение
-          return;
-        }
+  const directions = getDirectionsByPiece(piece) as Array<Direction>;
 
-        // Если на клетке вражеская фигура, добавляем ее
-        if (
-          isOccupiedByPiece(target, board) &&
-          isEnemyPiece(target, board, piece.color)
-        ) {
-          moves.push(target);
-          return; // В этом случае мы выходим из цикла
-        }
-
-        if (
-          (direction === DIRECTIONS.RIGHT && checkIsRightEdge(index)) ||
-          (direction === DIRECTIONS.LEFT && checkIsLeftEdge(index))
-        )
-          return;
-        moves.push(target);
-        if (
-          (direction === DIRECTIONS.RIGHT && checkIsRightEdge(target)) ||
-          (direction === DIRECTIONS.LEFT && checkIsLeftEdge(target))
-        )
-          return;
-        target += targetIndex;
+  directions.forEach(({ direction, index: targetIndex }) => {
+    let target = index + targetIndex;
+    while (checkIsInBounds(target)) {
+      if (
+        isOccupiedByPiece(target, board) &&
+        !isEnemyPiece(target, board, piece.color)
+      ) {
+        // Если на клетке своя фигура, нужно остановить движение
+        return;
       }
+
+      // Если на клетке вражеская фигура, добавляем ее
+      if (
+        isOccupiedByPiece(target, board) &&
+        isEnemyPiece(target, board, piece.color)
+      ) {
+        moves.push(target);
+        return; // В этом случае мы выходим из цикла
+      }
+
+      if (
+        (direction === DIRECTIONS.RIGHT && checkIsRightEdge(index)) ||
+        (direction === DIRECTIONS.LEFT && checkIsLeftEdge(index))
+      )
+        return;
+      moves.push(target);
+      if (
+        (direction === DIRECTIONS.RIGHT && checkIsRightEdge(target)) ||
+        (direction === DIRECTIONS.LEFT && checkIsLeftEdge(target))
+      )
+        return;
+      target += targetIndex;
     }
-  );
+  });
   return moves;
 };
 
 // Функция для получения доступных ходов для ладьи
 export const getRookMoves = (piece: PieceType, index: number, board: Board) => {
-  const topMove = {
-    index: getDirectionIndexes(piece.color, DIRECTIONS.STRAIGHT),
-    direction: DIRECTIONS.STRAIGHT,
-  };
-  const backMove = {
-    index: -getDirectionIndexes(piece.color, DIRECTIONS.STRAIGHT),
-    direction: DIRECTIONS.BOTTOM,
-  };
-
-  const rightMove = {
-    index: getDirectionIndexes(piece.color, DIRECTIONS.RIGHT),
-    direction: DIRECTIONS.RIGHT,
-  };
-  const leftMove = {
-    index: getDirectionIndexes(piece.color, DIRECTIONS.LEFT),
-    direction: DIRECTIONS.LEFT,
-  };
-
-  const directions = [topMove, backMove, rightMove, leftMove];
-  const blackDirections = directions.map((dir) => ({
-    ...dir,
-    index: -dir.index,
-  }));
-
   const moves: Array<number> = [];
 
-  (piece.color === COLORS.white ? directions : blackDirections).forEach(
-    ({ index: targetIndex, direction }) => {
-      let target = index + targetIndex;
-      while (checkIsInBounds(target)) {
-        if (
-          isOccupiedByPiece(target, board) &&
-          !isEnemyPiece(target, board, piece.color)
-        ) {
-          // Если на клетке своя фигура, нужно остановить движение
-          return;
-        }
+  const directions = getDirectionsByPiece(piece) as Array<Direction>;
 
-        // Если на клетке вражеская фигура, добавляем ее
-        if (
-          isOccupiedByPiece(target, board) &&
-          isEnemyPiece(target, board, piece.color)
-        ) {
-          moves.push(target);
-          return; // В этом случае мы выходим из цикла
-        }
-
-        if (
-          (direction === DIRECTIONS.RIGHT && checkIsRightEdge(index)) ||
-          (direction === DIRECTIONS.LEFT && checkIsLeftEdge(index)) ||
-          (direction === DIRECTIONS.BOTTOM && checkIsBottomEdge(index)) ||
-          (direction === DIRECTIONS.STRAIGHT && checkIsTopEdge(index))
-        )
-          return;
-
-        moves.push(target);
-        if (
-          (direction === DIRECTIONS.RIGHT && checkIsRightEdge(target)) ||
-          (direction === DIRECTIONS.LEFT && checkIsLeftEdge(target)) ||
-          (direction === DIRECTIONS.BOTTOM && checkIsBottomEdge(target)) ||
-          (direction === DIRECTIONS.STRAIGHT && checkIsTopEdge(target))
-        )
-          return;
-        target += targetIndex;
+  directions.forEach(({ index: targetIndex, direction }) => {
+    let target = index + targetIndex;
+    while (checkIsInBounds(target)) {
+      if (
+        isOccupiedByPiece(target, board) &&
+        !isEnemyPiece(target, board, piece.color)
+      ) {
+        // Если на клетке своя фигура, нужно остановить движение
+        return;
       }
+
+      // Если на клетке вражеская фигура, добавляем ее
+      if (
+        isOccupiedByPiece(target, board) &&
+        isEnemyPiece(target, board, piece.color)
+      ) {
+        moves.push(target);
+        return; // В этом случае мы выходим из цикла
+      }
+
+      if (
+        (direction === DIRECTIONS.RIGHT && checkIsRightEdge(index)) ||
+        (direction === DIRECTIONS.LEFT && checkIsLeftEdge(index)) ||
+        (direction === DIRECTIONS.BOTTOM && checkIsBottomEdge(index)) ||
+        (direction === DIRECTIONS.STRAIGHT && checkIsTopEdge(index))
+      )
+        return;
+
+      moves.push(target);
+      if (
+        (direction === DIRECTIONS.RIGHT && checkIsRightEdge(target)) ||
+        (direction === DIRECTIONS.LEFT && checkIsLeftEdge(target)) ||
+        (direction === DIRECTIONS.BOTTOM && checkIsBottomEdge(target)) ||
+        (direction === DIRECTIONS.STRAIGHT && checkIsTopEdge(target))
+      )
+        return;
+      target += targetIndex;
     }
-  );
+  });
   return moves;
 };
 
