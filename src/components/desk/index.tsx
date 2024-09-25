@@ -1,14 +1,14 @@
 import React, { useEffect, useState } from "react";
-import { createLogger } from "vite";
 import { DeskContainer } from "./styles";
 import Cell, { PieceType } from "../cell";
-import { COLORS } from "../../constants";
+import { COLORS, DIRECTIONS } from "../../constants";
 import {
   movesInCheck,
   generateId,
   getKingCheckPiece,
   isOccupiedByPiece,
   isCheckmate,
+  getDirectionIndexes,
 } from "../../utils"; // Импортируем isCheckmate
 import {
   getBishopMoves,
@@ -61,21 +61,44 @@ const Desk: React.FC<Props> = ({ board: initBoard }) => {
   const makeMove = (index: number) => {
     if (!selectedPiece) return;
 
+    const emptyCell = {
+      id: generateId(),
+      color: null,
+      type: null,
+      lastMove: {
+        index: null,
+      },
+    };
+
     const updatedBoard = [...board];
+
+    const { piece } = selectedPiece;
+
+    // Проверяем, было ли взятие на проходе
+    const isEnPassant =
+      piece.type === "pawn" && Math.abs(index - selectedPiece.index) === 9; // Если разница в 9, то это взятие на проходе
+
+    // Убираем фигуру с доски, если это взятие на проходе
+    if (isEnPassant) {
+      const enemyPawnIndex =
+        index - getDirectionIndexes(piece.color, DIRECTIONS.STRAIGHT);
+      updatedBoard[enemyPawnIndex] = emptyCell;
+    }
+
     updatedBoard[index] =
       selectedPiece.piece.type === "pawn"
         ? {
             ...selectedPiece.piece,
             index,
             isFirstMove: selectedPiece.piece.isFirstMove === true && false,
+            lastMove: {
+              index: selectedPiece.index,
+              wasFirst: selectedPiece.piece.isFirstMove === true,
+            },
           }
         : { ...selectedPiece.piece, index };
 
-    updatedBoard[selectedPiece.index] = {
-      id: generateId(),
-      color: null,
-      type: null,
-    };
+    updatedBoard[selectedPiece.index] = emptyCell;
 
     setBoard(updatedBoard);
     setCurrentMove((prevState) =>

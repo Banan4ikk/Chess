@@ -9,6 +9,10 @@ export type PieceType = {
   id: string | null;
   color: COLORS | null;
   type: Pieces | null;
+  lastMove: {
+    index: number | null;
+    wasFirst?: boolean;
+  };
   isFirstMove?: boolean;
   index?: number;
 };

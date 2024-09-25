@@ -213,6 +213,19 @@ export const getPawnMoves = (
     }
     if (isEnemyLeft) moves.push(attackLeft);
   }
+
+  const rightMove = index + getDirectionIndexes(piece.color, DIRECTIONS.RIGHT);
+  const leftMove = index + getDirectionIndexes(piece.color, DIRECTIONS.LEFT);
+
+  const isEnemyPawnRight = isEnemyPiece(rightMove, board, piece.color);
+  const isEnemyPawnLeft = isEnemyPiece(leftMove, board, piece.color);
+
+  if (isEnemyPawnRight && board[rightMove].lastMove?.wasFirst) {
+    moves.push(attackRight);
+  }
+  if (isEnemyPawnLeft && board[leftMove].lastMove?.wasFirst) {
+    moves.push(attackRight);
+  }
   moves.push(target);
   if (
     !isOccupiedByPiece(firstMoveTarget, board) &&
