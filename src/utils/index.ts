@@ -118,25 +118,27 @@ export const getEnemyColor = (color: COLORS | null) => {
 export const getAvailableMovesForPiece = (
   piece: PieceType,
   index: number,
-  board: Array<PieceType>
+  board: Array<PieceType>,
+  withMyFigures?: boolean,
+  onlyPawnAttack?: boolean
 ) => {
   let moves: Array<number> = [];
   // Определяем ходы для каждой фигуры в зависимости от её типа
   switch (piece.type) {
     case "bishop":
-      moves = getBishopMoves(piece, index, board);
+      moves = getBishopMoves(piece, index, board, withMyFigures);
       break;
     case "rook":
-      moves = getRookMoves(piece, index, board);
+      moves = getRookMoves(piece, index, board, withMyFigures);
       break;
     case "queen":
-      moves = getQueenMoves(piece, index, board);
+      moves = getQueenMoves(piece, index, board, withMyFigures);
       break;
     case "knight":
-      moves = getKnightMoves(piece, index, board);
+      moves = getKnightMoves(piece, index, board, withMyFigures);
       break;
     case "pawn":
-      moves = getPawnMoves(piece, index, board, true);
+      moves = getPawnMoves(piece, index, board, true, onlyPawnAttack);
       break;
     default:
       moves = [];
@@ -206,20 +208,24 @@ const getDirectionToKing = (
     if (colDiff === 0) return rowDiff > 0 ? boardSize : -boardSize; // По вертикали
   }
 
+  let direction: number | null = null;
+
   // Для слона (диагональное направление)
   if (pieceType === "bishop" || pieceType === "queen") {
-    if (Math.abs(rowDiff) === Math.abs(colDiff)) {
-      return rowDiff > 0
-        ? colDiff > 0
-          ? boardSize + 1
-          : boardSize - 1
-        : colDiff > 0
-        ? -(boardSize - 1)
-        : -(boardSize + 1);
+    if (Math.abs(rowDiff) !== Math.abs(colDiff)) return null;
+
+    if (rowDiff > 0 && colDiff > 0) {
+      direction = boardSize + 1;
+    } else if (rowDiff > 0 && colDiff <= 0) {
+      direction = boardSize - 1;
+    } else if (rowDiff <= 0 && colDiff > 0) {
+      direction = -(boardSize - 1);
+    } else {
+      direction = -(boardSize + 1);
     }
   }
 
-  return null; // Если направление не найдено
+  return direction;
 };
 
 export const calculateAttackLine = (
@@ -313,22 +319,19 @@ export const movesInCheck = (
   return validMoves;
 };
 
-export const isCheckmate = (
-  color: COLORS,
+export const isSquareProtected = (
+  target: number,
+  enemyColor: COLORS,
   board: Array<PieceType>
 ): boolean => {
-  const kingIndex = findKingIndex(color, board);
+  return board.some((piece, index) => {
+    // Проверяем, что это вражеская фигура
+    if (!piece || piece.color !== enemyColor) return false;
 
-  // Проверяем, есть ли король
-  if (kingIndex === -1) return false;
+    // Получаем доступные ходы для этой фигуры
+    const availableMoves = getAvailableMovesForPiece(piece, index, board, true);
 
-  // Получаем фигуру, угрожающую королю
-  const attackingPiece = getKingCheckPiece(color, board);
-  if (!attackingPiece) return false;
-
-  // Получаем доступные ходы короля
-  const kingMoves = movesInCheck(board[kingIndex], attackingPiece, board);
-
-  // Проверяем, есть ли доступные ходы
-  return kingMoves.length === 0; // Если нет доступных ходов, это мат
+    // Проверяем, может ли эта фигура атаковать целевую клетку
+    return availableMoves.includes(target);
+  });
 };

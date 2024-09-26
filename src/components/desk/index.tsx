@@ -7,7 +7,6 @@ import {
   generateId,
   getKingCheckPiece,
   isOccupiedByPiece,
-  isCheckmate,
   getDirectionIndexes,
 } from "../../utils"; // Импортируем isCheckmate
 import {
@@ -33,6 +32,7 @@ const Desk: React.FC<Props> = ({ board: initBoard }) => {
   const [availableMoves, setAvailableMoves] = useState<Array<number>>([]);
   const [checkPiece, setCheckPiece] = useState<PieceType | null>(null);
   const [isInCheck, setIsInCheck] = useState<boolean>(false);
+  // @ts-ignore
   const [isInCheckMate, setIsInCheckMate] = useState<boolean>(false); // Добавляем состояние мата
 
   useEffect(() => {
@@ -42,15 +42,6 @@ const Desk: React.FC<Props> = ({ board: initBoard }) => {
     }));
     setBoard(updBoard);
   }, []);
-
-  useEffect(() => {
-    // Проверяем мат после каждого хода
-    if (isInCheck) {
-      const checkmate = isCheckmate(currentMove, board);
-      setIsInCheckMate(checkmate); // Обновляем состояние мата
-      console.log("checkmate");
-    }
-  }, [isInCheck, board, currentMove]);
 
   const getColor = (index: number) => {
     const row = Math.floor(index / 8);
@@ -111,7 +102,7 @@ const Desk: React.FC<Props> = ({ board: initBoard }) => {
     const kingCheckPiece = getKingCheckPiece(currentMove, updatedBoard);
 
     if (kingCheckPiece) {
-      // Возвращаем доску к исходному состоянию
+      console.log("check");
       setCheckPiece(kingCheckPiece);
       setIsInCheck(true);
     } else {
@@ -167,6 +158,14 @@ const Desk: React.FC<Props> = ({ board: initBoard }) => {
       // Добавлен возврат, чтобы избежать сброса выбранной фигуры
     }
   };
+
+  useEffect(() => {
+    // Проверяем мат после каждого хода
+    if (isInCheck && !availableMoves.length) {
+      console.log("checkmate");
+      setIsInCheckMate(true); // Обновляем состояние мата
+    }
+  }, [isInCheck, board, currentMove]);
 
   return (
     <DeskContainer>

@@ -9,8 +9,10 @@ import {
   checkIsTopEdge,
   findKingIndex,
   getDirectionIndexes,
+  getEnemyColor,
   isEnemyPiece,
   isOccupiedByPiece,
+  isSquareProtected,
   isSquareUnderAttack,
 } from "./index";
 
@@ -84,7 +86,8 @@ export const getDirectionsByPiece = (piece: PieceType) => {
 export const getBishopMoves = (
   piece: PieceType,
   index: number,
-  board: Board
+  board: Board,
+  withMyFigures?: boolean
 ) => {
   const moves: Array<number> = [];
 
@@ -93,34 +96,44 @@ export const getBishopMoves = (
   directions.forEach(({ direction, index: targetIndex }) => {
     let target = index + targetIndex;
     while (checkIsInBounds(target)) {
-      if (
-        isOccupiedByPiece(target, board) &&
-        !isEnemyPiece(target, board, piece.color)
-      ) {
-        // Если на клетке своя фигура, нужно остановить движение
-        return;
-      }
-
-      // Если на клетке вражеская фигура, добавляем ее
-      if (
-        isOccupiedByPiece(target, board) &&
-        isEnemyPiece(target, board, piece.color)
-      ) {
+      // Если флаг включен, добавляем все клетки (включая свои)
+      if (withMyFigures) {
         moves.push(target);
-        return; // В этом случае мы выходим из цикла
+        // Если на клетке есть своя фигура, выходим из цикла
+        if (
+          isOccupiedByPiece(target, board) &&
+          !isEnemyPiece(target, board, piece.color)
+        ) {
+          return;
+        }
+      } else {
+        // Если на клетке своя фигура, нужно остановить движение
+        if (
+          isOccupiedByPiece(target, board) &&
+          !isEnemyPiece(target, board, piece.color)
+        ) {
+          return;
+        }
+
+        // Если на клетке вражеская фигура, добавляем ее
+        if (
+          isOccupiedByPiece(target, board) &&
+          isEnemyPiece(target, board, piece.color)
+        ) {
+          moves.push(target);
+          return; // В этом случае мы выходим из цикла
+        }
       }
 
-      if (
-        (direction === DIRECTIONS.RIGHT && checkIsRightEdge(index)) ||
-        (direction === DIRECTIONS.LEFT && checkIsLeftEdge(index))
-      )
-        return;
-      moves.push(target);
+      // Проверка границ доски
       if (
         (direction === DIRECTIONS.RIGHT && checkIsRightEdge(target)) ||
         (direction === DIRECTIONS.LEFT && checkIsLeftEdge(target))
-      )
+      ) {
         return;
+      }
+
+      moves.push(target);
       target += targetIndex;
     }
   });
@@ -128,7 +141,12 @@ export const getBishopMoves = (
 };
 
 // Функция для получения доступных ходов для ладьи
-export const getRookMoves = (piece: PieceType, index: number, board: Board) => {
+export const getRookMoves = (
+  piece: PieceType,
+  index: number,
+  board: Board,
+  withMyFigures?: boolean
+) => {
   const moves: Array<number> = [];
 
   const directions = getDirectionsByPiece(piece) as Array<Direction>;
@@ -136,39 +154,46 @@ export const getRookMoves = (piece: PieceType, index: number, board: Board) => {
   directions.forEach(({ index: targetIndex, direction }) => {
     let target = index + targetIndex;
     while (checkIsInBounds(target)) {
-      if (
-        isOccupiedByPiece(target, board) &&
-        !isEnemyPiece(target, board, piece.color)
-      ) {
-        // Если на клетке своя фигура, нужно остановить движение
-        return;
-      }
-
-      // Если на клетке вражеская фигура, добавляем ее
-      if (
-        isOccupiedByPiece(target, board) &&
-        isEnemyPiece(target, board, piece.color)
-      ) {
+      // Если флаг включен, добавляем все клетки (включая свои)
+      if (withMyFigures) {
         moves.push(target);
-        return; // В этом случае мы выходим из цикла
+        // Если на клетке есть своя фигура, выходим из цикла
+        if (
+          isOccupiedByPiece(target, board) &&
+          !isEnemyPiece(target, board, piece.color)
+        ) {
+          return;
+        }
+      } else {
+        // Если на клетке своя фигура, нужно остановить движение
+        if (
+          isOccupiedByPiece(target, board) &&
+          !isEnemyPiece(target, board, piece.color)
+        ) {
+          return;
+        }
+
+        // Если на клетке вражеская фигура, добавляем ее
+        if (
+          isOccupiedByPiece(target, board) &&
+          isEnemyPiece(target, board, piece.color)
+        ) {
+          moves.push(target);
+          return; // В этом случае мы выходим из цикла
+        }
       }
 
-      if (
-        (direction === DIRECTIONS.RIGHT && checkIsRightEdge(index)) ||
-        (direction === DIRECTIONS.LEFT && checkIsLeftEdge(index)) ||
-        (direction === DIRECTIONS.BOTTOM && checkIsBottomEdge(index)) ||
-        (direction === DIRECTIONS.STRAIGHT && checkIsTopEdge(index))
-      )
-        return;
-
-      moves.push(target);
+      // Проверка границ доски
       if (
         (direction === DIRECTIONS.RIGHT && checkIsRightEdge(target)) ||
         (direction === DIRECTIONS.LEFT && checkIsLeftEdge(target)) ||
         (direction === DIRECTIONS.BOTTOM && checkIsBottomEdge(target)) ||
         (direction === DIRECTIONS.STRAIGHT && checkIsTopEdge(target))
-      )
+      ) {
         return;
+      }
+
+      moves.push(target);
       target += targetIndex;
     }
   });
@@ -179,9 +204,11 @@ export const getPawnMoves = (
   piece: PieceType,
   index: number,
   board: Board,
-  includeAttack?: boolean
+  includeAttack?: boolean,
+  withOnlyAttack?: boolean,
+  withMyFigures?: boolean // Добавлен новый флаг
 ) => {
-  const moves: Array<number> = [];
+  let moves: Array<number> = [];
   const firstMoveDirection =
     getDirectionIndexes(piece.color, DIRECTIONS.STRAIGHT) * 2;
   const direction = getDirectionIndexes(piece.color, DIRECTIONS.STRAIGHT);
@@ -192,16 +219,17 @@ export const getPawnMoves = (
 
   const target = index + direction;
   const firstMoveTarget = index + firstMoveDirection;
+
+  // Проверяем, что целевая клетка в пределах доски
   if (!checkIsInBounds(target)) return moves;
-  if (
-    isOccupiedByPiece(target, board) &&
-    !isEnemyPiece(target, board, piece.color)
-  )
-    return moves;
+
+  // Если на целевой клетке своя фигура, выходим
+  if (isOccupiedByPiece(target, board) && !withMyFigures) return moves;
 
   const isEnemyLeft = isEnemyPiece(attackLeft, board, piece.color);
   const isEnemyRight = isEnemyPiece(attackRight, board, piece.color);
 
+  // Проверяем, есть ли вражеские фигуры на клетках атаки
   if (
     (isOccupiedByPiece(target, board) ||
       isOccupiedByPiece(attackRight, board) ||
@@ -220,13 +248,20 @@ export const getPawnMoves = (
   const isEnemyPawnRight = isEnemyPiece(rightMove, board, piece.color);
   const isEnemyPawnLeft = isEnemyPiece(leftMove, board, piece.color);
 
+  // Проверяем возможность взятия на проходе
   if (isEnemyPawnRight && board[rightMove].lastMove?.wasFirst) {
     moves.push(attackRight);
   }
   if (isEnemyPawnLeft && board[leftMove].lastMove?.wasFirst) {
-    moves.push(attackRight);
+    moves.push(attackLeft);
   }
-  moves.push(target);
+
+  // Добавляем стандартный ход вперёд
+  if (!isOccupiedByPiece(target, board) || withMyFigures) {
+    moves.push(target);
+  }
+
+  // Добавляем двойной ход, если это первый ход
   if (
     !isOccupiedByPiece(firstMoveTarget, board) &&
     piece.isFirstMove === true &&
@@ -235,24 +270,33 @@ export const getPawnMoves = (
     moves.push(firstMoveTarget);
   }
 
+  // Если только атака, очищаем массив ходов
+  if (withOnlyAttack) moves = [];
+
+  // Добавляем возможные атаки, если это разрешено
   if (includeAttack) {
-    moves.push(attackLeft, attackRight);
+    if (isEnemyLeft) moves.push(attackLeft);
+    if (isEnemyRight) moves.push(attackRight);
   }
+
   return moves;
 };
 
 export const getKnightMoves = (
   piece: PieceType,
   index: number,
-  board: Board
+  board: Board,
+  withMyFigures?: boolean
 ) => {
   const endMoves: Array<number> = [];
+
   const directionRight =
     getDirectionIndexes(piece.color, DIRECTIONS.STRAIGHT) * 2 +
     getDirectionIndexes(piece.color, DIRECTIONS.RIGHT);
   const directionLeft =
     getDirectionIndexes(piece.color, DIRECTIONS.STRAIGHT) * 2 +
     getDirectionIndexes(piece.color, DIRECTIONS.LEFT);
+
   const directionBackRight =
     getDirectionIndexes(piece.color, DIRECTIONS.STRAIGHT) * -2 +
     getDirectionIndexes(piece.color, DIRECTIONS.RIGHT);
@@ -266,79 +310,75 @@ export const getKnightMoves = (
   const directionLeftLine =
     getDirectionIndexes(piece.color, DIRECTIONS.STRAIGHT) +
     2 * getDirectionIndexes(piece.color, DIRECTIONS.LEFT);
-  const directionBackRightLine =
-    getDirectionIndexes(piece.color, DIRECTIONS.STRAIGHT) +
-    -2 * getDirectionIndexes(piece.color, DIRECTIONS.RIGHT);
-  const directionBackLeftLine =
-    getDirectionIndexes(piece.color, DIRECTIONS.STRAIGHT) +
-    -2 * getDirectionIndexes(piece.color, DIRECTIONS.LEFT);
 
-  const targetStraightRight = index + directionRight;
-  const targetStraightLeft = index + directionLeft;
-  const targetBackRight = index + directionBackRight;
-  const targetBackLeft = index + directionBackLeft;
-  const targetStraightRightLine = index + directionRightLine;
-  const targetStraightLeftLine = index + directionLeftLine;
-  const targetBackRightLine = index + directionBackRightLine;
-  const targetBackLeftLine = index + directionBackLeftLine;
+  const directionBackRightLine =
+    -getDirectionIndexes(piece.color, DIRECTIONS.STRAIGHT) +
+    2 * getDirectionIndexes(piece.color, DIRECTIONS.RIGHT);
+  const directionBackLeftLine =
+    -getDirectionIndexes(piece.color, DIRECTIONS.STRAIGHT) +
+    2 * getDirectionIndexes(piece.color, DIRECTIONS.LEFT);
 
   const moves = [
-    { move: targetStraightRight, rowChange: 2, colChange: 1 },
-    { move: targetStraightLeft, rowChange: 2, colChange: -1 },
-    { move: targetBackRight, rowChange: -2, colChange: 1 },
-    { move: targetBackLeft, rowChange: -2, colChange: -1 },
-    { move: targetStraightRightLine, rowChange: 1, colChange: 2 },
-    { move: targetStraightLeftLine, rowChange: 1, colChange: -2 },
-    { move: targetBackRightLine, rowChange: -1, colChange: 2 },
-    { move: targetBackLeftLine, rowChange: -1, colChange: -2 },
+    index + directionRight,
+    index + directionLeft,
+    index + directionBackRight,
+    index + directionBackLeft,
+    index + directionRightLine,
+    index + directionLeftLine,
+    index + directionBackRightLine,
+    index + directionBackLeftLine,
   ];
 
-  moves.forEach(({ move, rowChange, colChange }) => {
-    const currentRow = Math.floor(index / 8);
-    const currentCol = index % 8;
-    const targetRow = Math.floor(move / 8);
+  // Получаем текущий столбец фигуры
+  const currentCol = index % 8;
+
+  // Проверяем, чтобы ход не перескакивал через края доски
+  moves.forEach((move) => {
     const targetCol = move % 8;
 
-    if (
-      isOccupiedByPiece(move, board) &&
-      !isEnemyPiece(move, board, piece.color)
-    ) {
-      // Если на клетке своя фигура, нужно остановить движение
+    // Проверяем, что ход не перескочил через края доски
+    if (Math.abs(currentCol - targetCol) > 2) return; // Ход недействителен, если перескочил больше чем на 2 столбца
+
+    // Проверяем границы доски
+    if (!checkIsInBounds(move)) return;
+
+    if (withMyFigures) {
+      moves.push(move);
       return;
     }
 
-    // Если на клетке вражеская фигура, добавляем ее
+    // Пропускаем, если на клетке своя фигура
     if (
       isOccupiedByPiece(move, board) &&
-      isEnemyPiece(move, board, piece.color)
-    ) {
-      endMoves.push(move);
-      return; // В этом случае мы выходим из цикла
-    }
+      !isEnemyPiece(move, board, piece.color)
+    )
+      return;
 
-    if (
-      Math.abs(currentRow - targetRow) === Math.abs(rowChange) &&
-      Math.abs(currentCol - targetCol) === Math.abs(colChange) &&
-      checkIsInBounds(move)
-    ) {
-      endMoves.push(move);
-    }
+    // Добавляем ход, если клетка допустима
+    endMoves.push(move);
   });
+
   return endMoves;
 };
 
 export const getQueenMoves = (
   piece: PieceType,
   index: number,
-  board: Board
+  board: Board,
+  withMyFigures?: boolean
 ) => {
   return [
-    ...getBishopMoves(piece, index, board),
-    ...getRookMoves(piece, index, board),
+    ...getBishopMoves(piece, index, board, withMyFigures),
+    ...getRookMoves(piece, index, board, withMyFigures),
   ];
 };
 
-export const getKingMoves = (piece: PieceType, index: number, board: Board) => {
+export const getKingMoves = (
+  piece: PieceType,
+  index: number,
+  board: Board,
+  withMyFigures?: boolean
+) => {
   const moves: Array<number> = [];
   const directions = [
     {
@@ -383,7 +423,7 @@ export const getKingMoves = (piece: PieceType, index: number, board: Board) => {
     },
   ];
 
-  const enemyColor = piece.color === COLORS.black ? COLORS.white : COLORS.black;
+  const enemyColor = getEnemyColor(piece.color);
   const enemyKingIndex = findKingIndex(enemyColor, board);
   const enemyKingMoves: Array<number> = [];
 
@@ -411,10 +451,26 @@ export const getKingMoves = (piece: PieceType, index: number, board: Board) => {
 
     if (
       isOccupiedByPiece(target, board) &&
+      isSquareProtected(target, enemyColor, board)
+    )
+      return;
+
+    if (
+      isOccupiedByPiece(target, board) &&
       isEnemyPiece(target, board, piece.color)
     ) {
       moves.push(target);
     }
+
+    if (withMyFigures) {
+      moves.push(target);
+      return;
+    }
+    if (
+      isOccupiedByPiece(target, board) &&
+      !isEnemyPiece(target, board, piece.color)
+    )
+      return;
 
     // Проверка краёв доски
     if (
