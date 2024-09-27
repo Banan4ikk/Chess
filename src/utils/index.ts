@@ -335,3 +335,44 @@ export const isSquareProtected = (
     return availableMoves.includes(target);
   });
 };
+
+// Функция для проверки, что путь от `start` до `end` свободен от фигур
+export const checkPathIsClear = (
+  start: number,
+  end: number,
+  board: Array<PieceType>,
+  direction: number
+): boolean => {
+  let currentIndex = start + direction;
+
+  // Проходим по клеткам между королем и ладьей
+  while (currentIndex !== end) {
+    if (isOccupiedByPiece(currentIndex, board)) {
+      return false; // Если есть фигура, путь не свободен
+    }
+    currentIndex += direction;
+  }
+
+  return true; // Путь свободен
+};
+
+// Функция для проверки, что клетки на пути рокировки не под атакой
+export const checkPathIsSafe = (
+  start: number,
+  end: number,
+  board: Array<PieceType>,
+  enemyColor: COLORS,
+  direction: number
+): boolean => {
+  let currentIndex = start;
+
+  // Проверяем каждую клетку на пути рокировки
+  while (currentIndex !== end + direction) {
+    if (isSquareUnderAttack(currentIndex, enemyColor, board)) {
+      return false; // Если клетка под атакой, путь не безопасен
+    }
+    currentIndex += direction;
+  }
+
+  return true; // Путь безопасен
+};

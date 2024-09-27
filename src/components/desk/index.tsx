@@ -62,33 +62,41 @@ const Desk: React.FC<Props> = ({ board: initBoard }) => {
     };
 
     const updatedBoard = [...board];
-
     const { piece } = selectedPiece;
 
-    // Проверяем, было ли взятие на проходе
-    const isEnPassant =
-      piece.type === "pawn" && Math.abs(index - selectedPiece.index) === 9; // Если разница в 9, то это взятие на проходе
+    // Логика рокировки
+    if (piece.type === "king" && Math.abs(index - selectedPiece.index) === 2) {
+      // Если король переместился на 2 клетки, это рокировка
+      const rookStartIndex =
+        index > selectedPiece.index ? index + 1 : index - 2; // Определяем индекс начальной позиции ладьи
+      const rookTargetIndex =
+        index > selectedPiece.index ? index - 1 : index + 1; // Определяем новую позицию ладьи
 
-    // Убираем фигуру с доски, если это взятие на проходе
-    if (isEnPassant) {
-      const enemyPawnIndex =
-        index - getDirectionIndexes(piece.color, DIRECTIONS.STRAIGHT);
-      updatedBoard[enemyPawnIndex] = emptyCell;
+      // Перемещаем ладью
+      updatedBoard[rookTargetIndex] = {
+        ...updatedBoard[rookStartIndex], // Копируем информацию о ладье
+        lastMove: {
+          index: rookStartIndex,
+          wasFirst: updatedBoard[rookStartIndex].isFirstMove, // Запоминаем, делала ли ладья первый ход
+        },
+      };
+
+      // Очищаем начальную позицию ладьи
+      updatedBoard[rookStartIndex] = emptyCell;
     }
 
-    updatedBoard[index] =
-      selectedPiece.piece.type === "pawn"
-        ? {
-            ...selectedPiece.piece,
-            index,
-            isFirstMove: selectedPiece.piece.isFirstMove === true && false,
-            lastMove: {
-              index: selectedPiece.index,
-              wasFirst: selectedPiece.piece.isFirstMove === true,
-            },
-          }
-        : { ...selectedPiece.piece, index };
+    // Обновляем позицию короля
+    updatedBoard[index] = {
+      ...selectedPiece.piece,
+      index,
+      isFirstMove: false, // Король уже сделал первый ход
+      lastMove: {
+        index: selectedPiece.index,
+        wasFirst: selectedPiece.piece.isFirstMove,
+      },
+    };
 
+    // Очищаем начальную позицию короля
     updatedBoard[selectedPiece.index] = emptyCell;
 
     setBoard(updatedBoard);
@@ -106,7 +114,6 @@ const Desk: React.FC<Props> = ({ board: initBoard }) => {
       setCheckPiece(kingCheckPiece);
       setIsInCheck(true);
     } else {
-      // Если шаха нет, обновляем доску и ход переходит другой стороне
       setIsInCheck(false);
       setCheckPiece(null);
     }

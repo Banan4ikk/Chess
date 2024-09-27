@@ -1,4 +1,5 @@
 // Функция для получения доступных ходов для слона
+import { createLogger } from "vite";
 import { PieceType } from "../components/cell";
 import { COLORS, DIRECTIONS } from "../constants";
 import {
@@ -7,6 +8,8 @@ import {
   checkIsLeftEdge,
   checkIsRightEdge,
   checkIsTopEdge,
+  checkPathIsClear,
+  checkPathIsSafe,
   findKingIndex,
   getDirectionIndexes,
   getEnemyColor,
@@ -484,6 +487,45 @@ export const getKingMoves = (
     // Добавляем допустимый ход
     moves.push(target);
   });
+
+  // Логика рокировки
+  if (!piece.lastMove || piece.lastMove.index === null) {
+    const blackRook = [0, 7]; // Позиции ладей при рокировке
+    const whiteRook = [56, 63]; // Позиции ладей при рокировке
+
+    const castlingRookPositions =
+      piece.color === COLORS.black ? blackRook : whiteRook;
+
+    castlingRookPositions.forEach((rookPos) => {
+      const rook = board[rookPos];
+      if (
+        rook?.type === "rook" &&
+        rook?.color === piece.color &&
+        (!rook?.lastMove || rook?.lastMove.index === null) // Ладья не делала ходов
+      ) {
+        const directionToRook = rookPos > index ? 1 : -1;
+        const pathIsClear = checkPathIsClear(
+          index,
+          rookPos,
+          board,
+          directionToRook
+        );
+        const pathIsSafe = checkPathIsSafe(
+          index,
+          rookPos,
+          board,
+          enemyColor,
+          directionToRook
+        );
+
+        if (pathIsClear && pathIsSafe) {
+          const castlingTarget = index + directionToRook * 2;
+
+          moves.push(castlingTarget);
+        }
+      }
+    });
+  }
 
   return moves;
 };
